@@ -9,11 +9,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Vazirmatn:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Lalezar&family=Vazirmatn:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
   * { box-sizing: border-box; }
-  body { margin: 0; background: #141210; }
-  input::placeholder, textarea::placeholder { color: #6b6459; }
-  input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); }
+  html, body { margin: 0; background: #180f28; }
+  input::placeholder, textarea::placeholder { color: #8a7996; }
+  input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: #4a3a5e; border-radius: 999px; }
+  @keyframes drift1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-4%,5%) scale(1.1); } }
+  @keyframes drift2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(5%,-4%) scale(1.05); } }
+  .blob-a { animation: drift1 18s ease-in-out infinite; }
+  .blob-b { animation: drift2 22s ease-in-out infinite; }
 </style>
 </head>
 <body>
@@ -22,35 +28,24 @@
 const { useState, useEffect, useCallback } = React;
 
 /* ---------------------------------------------------------
-   Local storage helpers (works on any real browser/host,
-   unlike Claude's artifact-only window.storage)
+   Local storage helpers (real-browser persistence)
 --------------------------------------------------------- */
 function loadLS(key, fallback) {
   try {
     const v = localStorage.getItem(key);
     return v ? JSON.parse(v) : fallback;
-  } catch (e) {
-    return fallback;
-  }
+  } catch (e) { return fallback; }
 }
 function saveLS(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    console.error("localStorage save failed", e);
-  }
+  try { localStorage.setItem(key, JSON.stringify(value)); }
+  catch (e) { console.error("localStorage save failed", e); }
 }
 function useCollection(key) {
   const [items, setItems] = useState(() => loadLS(key, []));
-  const persist = useCallback((next) => {
-    setItems(next);
-    saveLS(key, next);
-  }, [key]);
+  const persist = useCallback((next) => { setItems(next); saveLS(key, next); }, [key]);
   return [items, persist];
 }
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
-}
+function uid() { return Math.random().toString(36).slice(2, 10); }
 
 const STORAGE_KEYS = {
   sessions: "tj-sessions",
@@ -61,14 +56,32 @@ const STORAGE_KEYS = {
 };
 
 /* ---------------------------------------------------------
-   Minimal inline icon set (no external icon library needed)
+   Palette (for inline JS use, e.g. style objects)
+--------------------------------------------------------- */
+const C = {
+  bgFrom: "#1b1130",
+  bgTo: "#2a1a33",
+  surface: "rgba(255,255,255,0.045)",
+  surfaceBorder: "rgba(232,140,110,0.16)",
+  coral: "#e8795f",
+  coralSoft: "#f0967d",
+  gold: "#e2b878",
+  cream: "#f8ece0",
+  muted: "#b6a6c4",
+  faint: "#8a7996",
+  chip: "#3a2a4a",
+  green: "#8fbf8a",
+};
+
+/* ---------------------------------------------------------
+   Minimal inline icon set
 --------------------------------------------------------- */
 const ICON_PATHS = {
-  grid: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></>,
+  grid: <><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/></>,
   pencil: <><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></>,
   list: <><path d="M9 6l2 2 4-4"/><path d="M9 12l2 2 4-4"/><path d="M9 18l2 2 4-4"/></>,
   book: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></>,
-  images: <><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5-4 4-3-3-4 4"/></>,
+  images: <><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5-4 4-3-3-4 4"/></>,
   users: <><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
   info: <><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></>,
   plus: <><path d="M12 5v14"/><path d="M5 12h14"/></>,
@@ -79,23 +92,15 @@ const ICON_PATHS = {
   chevron: <path d="M9 18l6-6-6-6"/>,
   star: <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>,
   phone: <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>,
-  calendar: <><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></>,
+  calendar: <><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></>,
   link: <><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07l1.5-1.5"/></>,
+  droplet: <path d="M12 2.69s5.66 5.94 5.66 9.94A5.66 5.66 0 0 1 12 18.3a5.66 5.66 0 0 1-5.66-5.67C6.34 8.63 12 2.69 12 2.69z"/>,
 };
 
-function Icon({ name, size = 18, color = "currentColor", strokeWidth = 1.75, fill = "none", className = "" }) {
+function Icon({ name, size = 18, color = "currentColor", strokeWidth = 1.9, fill = "none", className = "" }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill={fill === "none" ? "none" : fill}
-      stroke={color}
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={fill === "none" ? "none" : fill}
+      stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
       {ICON_PATHS[name]}
     </svg>
   );
@@ -142,42 +147,71 @@ const NEEDLE_INFO = [
 ];
 
 /* ---------------------------------------------------------
-   Shared UI bits
+   Shared UI bits — soft, rounded, "ink drop" language
 --------------------------------------------------------- */
-function StencilCard({ children, className = "" }) {
+function InkCard({ children, className = "", glow = "coral" }) {
+  const glowColor = glow === "gold" ? "rgba(226,184,120,0.22)" : "rgba(232,121,95,0.22)";
   return (
     <div
-      className={"relative rounded-sm border border-dashed border-[#4a443a] bg-[#1e1b18] p-4 " + className}
+      className={"relative rounded-[26px] p-4 overflow-hidden " + className}
       style={{
-        backgroundImage: "radial-gradient(circle at 8px 8px, #3a352e 1.5px, transparent 1.5px)",
-        backgroundSize: "16px 16px",
-        backgroundPosition: "top right",
+        background: "linear-gradient(155deg, rgba(255,255,255,0.055), rgba(255,255,255,0.02))",
+        border: "1px solid " + C.surfaceBorder,
+        boxShadow: "0 8px 24px -12px rgba(0,0,0,0.5)",
       }}
     >
-      {children}
+      <div
+        className="absolute -top-8 -left-8 w-24 h-24 rounded-full pointer-events-none"
+        style={{ background: glowColor, filter: "blur(22px)" }}
+      />
+      <div className="relative">{children}</div>
     </div>
   );
 }
+
 function SectionTitle({ eyebrow, title, action }) {
   return (
     <div className="flex items-end justify-between mb-4">
       <div>
-        {eyebrow && <div className="font-mono text-[11px] tracking-widest text-[#c9a06a] mb-1">{eyebrow}</div>}
-        <h2 className="text-3xl text-[#f3ede2] leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.02em" }}>{title}</h2>
+        {eyebrow && (
+          <div className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 mb-2" style={{ background: C.chip }}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: C.gold }} />
+            <span className="font-mono text-[10px] tracking-widest" style={{ color: C.gold }}>{eyebrow}</span>
+          </div>
+        )}
+        <h2 className="text-4xl leading-none" style={{ fontFamily: "'Lalezar', 'Vazirmatn', sans-serif", color: C.cream }}>{title}</h2>
       </div>
       {action}
     </div>
   );
 }
+
 function EmptyState({ text }) {
-  return <div className="border border-dashed border-[#3a352e] rounded-sm py-10 text-center text-[#9c9388] text-sm">{text}</div>;
+  return (
+    <div className="rounded-[26px] py-10 text-center text-sm" style={{ border: "2px dotted " + C.surfaceBorder, color: C.muted }}>
+      <div className="mx-auto mb-2 w-10 h-10 rounded-full flex items-center justify-center" style={{ background: C.chip }}>
+        <Icon name="droplet" size={16} color={C.gold} />
+      </div>
+      {text}
+    </div>
+  );
 }
+
 function IconBtn({ onClick, children, label }) {
   return (
-    <button onClick={onClick} aria-label={label} className="flex items-center gap-1.5 rounded-sm bg-[#b8272f] hover:bg-[#c9313a] active:bg-[#9e2028] text-[#f3ede2] px-3 py-2 text-sm font-medium transition-colors">
+    <button onClick={onClick} aria-label={label}
+      className="flex items-center gap-1.5 rounded-full text-white px-4 py-2.5 text-sm font-medium transition-transform active:scale-95 hover:brightness-110"
+      style={{ background: "linear-gradient(135deg, #ef8b6f, #d9673f)", boxShadow: "0 6px 16px -6px rgba(217,103,63,0.6)" }}>
       {children}
     </button>
   );
+}
+
+const inputCls = "w-full rounded-2xl px-3 py-2 text-sm outline-none transition-colors";
+const inputStyle = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: C.cream };
+
+function Field({ children }) {
+  return <label className="text-xs block" style={{ color: C.muted }}>{children}</label>;
 }
 
 /* ---------------------------------------------------------
@@ -187,8 +221,7 @@ function Dashboard({ sessions, checklist, clients, onNav }) {
   const totalMinutes = sessions.reduce((s, x) => s + (Number(x.duration) || 0), 0);
   const totalHours = (totalMinutes / 60).toFixed(1);
   const thisWeek = sessions.filter((s) => {
-    const d = new Date(s.date);
-    const now = new Date();
+    const d = new Date(s.date); const now = new Date();
     const diff = (now - d) / (1000 * 60 * 60 * 24);
     return diff >= 0 && diff <= 7;
   }).length;
@@ -203,56 +236,64 @@ function Dashboard({ sessions, checklist, clients, onNav }) {
     .slice(0, 3);
 
   const stats = [
-    { label: "کل ساعت تمرین", value: totalHours, icon: "clock" },
-    { label: "جلسه این هفته", value: thisWeek, icon: "flame" },
-    { label: "پیشرفت آموزش", value: progressPct + "%", icon: "list" },
+    { label: "کل ساعت تمرین", value: totalHours, icon: "clock", glow: "gold" },
+    { label: "جلسه این هفته", value: thisWeek, icon: "flame", glow: "coral" },
+    { label: "پیشرفت آموزش", value: progressPct + "%", icon: "list", glow: "gold" },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <div className="font-mono text-[11px] tracking-widest text-[#c9a06a] mb-1">ژورنال شاگردی</div>
-        <h1 className="text-4xl text-[#f3ede2] leading-none" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.02em" }}>مسیر تتوکاری تو</h1>
-        <p className="text-[#9c9388] text-sm mt-2">هر جلسه تمرین یک لایه رنگ اضافه به مهارتت هست. ادامه بده.</p>
+        <div className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 mb-2" style={{ background: C.chip }}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: C.gold }} />
+          <span className="font-mono text-[10px] tracking-widest" style={{ color: C.gold }}>ژورنال شاگردی</span>
+        </div>
+        <h1 className="text-5xl leading-tight" style={{ fontFamily: "'Lalezar', 'Vazirmatn', sans-serif", color: C.cream }}>مسیر تتوکاری تو</h1>
+        <p className="text-sm mt-2" style={{ color: C.muted }}>هر جلسه تمرین یک لایه رنگ اضافه به مهارتت هست. ادامه بده.</p>
+        <svg viewBox="0 0 400 24" className="w-full h-4 mt-4" preserveAspectRatio="none">
+          <path d="M0 12 C 50 0, 100 24, 150 12 S 250 0, 300 12 S 380 22, 400 12" fill="none" stroke={C.coral} strokeOpacity="0.45" strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         {stats.map((s) => (
-          <StencilCard key={s.label} className="text-center">
-            <Icon name={s.icon} size={16} color="#c9a06a" className="mx-auto mb-2" />
-            <div className="text-2xl text-[#f3ede2]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.value}</div>
-            <div className="text-[10px] text-[#9c9388] mt-1">{s.label}</div>
-          </StencilCard>
+          <InkCard key={s.label} className="text-center" glow={s.glow}>
+            <div className="mx-auto mb-2 w-9 h-9 rounded-full flex items-center justify-center" style={{ background: C.chip }}>
+              <Icon name={s.icon} size={15} color={C.gold} />
+            </div>
+            <div className="text-2xl" style={{ fontFamily: "'JetBrains Mono', monospace", color: C.cream }}>{s.value}</div>
+            <div className="text-[10px] mt-1" style={{ color: C.muted }}>{s.label}</div>
+          </InkCard>
         ))}
       </div>
 
-      <StencilCard>
+      <InkCard glow="gold">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-[#f3ede2] font-medium">پیشرفت نقشه‌ی راه</span>
-          <span className="font-mono text-xs text-[#c9a06a]">{doneCount}/{allChecklistItems.length}</span>
+          <span className="text-sm font-medium" style={{ color: C.cream }}>پیشرفت نقشه‌ی راه</span>
+          <span className="font-mono text-xs" style={{ color: C.gold }}>{doneCount}/{allChecklistItems.length}</span>
         </div>
-        <div className="h-2 w-full bg-[#26221e] rounded-full overflow-hidden">
-          <div className="h-full bg-[#b8272f] transition-all duration-500" style={{ width: progressPct + "%" }} />
+        <div className="h-2.5 w-full rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+          <div className="h-full rounded-full transition-all duration-700" style={{ width: progressPct + "%", background: "linear-gradient(90deg, #ef8b6f, #e2b878)" }} />
         </div>
-        <button onClick={() => onNav("checklist")} className="mt-3 flex items-center gap-1 text-xs text-[#c9a06a] hover:text-[#e0b788]">
+        <button onClick={() => onNav("checklist")} className="mt-3 flex items-center gap-1 text-xs hover:brightness-125" style={{ color: C.gold }}>
           مشاهده‌ی چک‌لیست کامل <Icon name="chevron" size={12} className="rotate-180" />
         </button>
-      </StencilCard>
+      </InkCard>
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-[#f3ede2] font-medium">نوبت‌های پیش رو</span>
-          <button onClick={() => onNav("clients")} className="text-xs text-[#c9a06a] hover:text-[#e0b788]">همه</button>
+          <span className="text-sm font-medium" style={{ color: C.cream }}>نوبت‌های پیش رو</span>
+          <button onClick={() => onNav("clients")} className="text-xs hover:brightness-125" style={{ color: C.gold }}>همه</button>
         </div>
         {upcomingClients.length === 0 ? <EmptyState text="نوبتی ثبت نشده." /> : (
           <div className="space-y-2">
             {upcomingClients.map((c) => (
-              <div key={c.id} className="flex items-center justify-between bg-[#1e1b18] rounded-sm px-3 py-2 border border-[#26221e]">
+              <div key={c.id} className="flex items-center justify-between rounded-2xl px-3.5 py-2.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <div>
-                  <div className="text-sm text-[#f3ede2]">{c.name}</div>
-                  <div className="text-[11px] text-[#9c9388]">{c.service}</div>
+                  <div className="text-sm" style={{ color: C.cream }}>{c.name}</div>
+                  <div className="text-[11px]" style={{ color: C.muted }}>{c.service}</div>
                 </div>
-                <div className="font-mono text-xs text-[#c9a06a]">{c.date}</div>
+                <div className="font-mono text-xs" style={{ color: C.gold }}>{c.date}</div>
               </div>
             ))}
           </div>
@@ -285,62 +326,62 @@ function PracticeLog({ sessions, setSessions }) {
       } />
 
       {showForm && (
-        <StencilCard className="space-y-3">
+        <InkCard className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <label className="text-xs text-[#9c9388]">تاریخ
-              <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1 w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]" />
-            </label>
-            <label className="text-xs text-[#9c9388]">سطح تمرین
-              <select value={form.surface} onChange={(e) => setForm({ ...form, surface: e.target.value })} className="mt-1 w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]">
+            <Field>تاریخ
+              <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className={inputCls + " mt-1"} style={inputStyle} />
+            </Field>
+            <Field>سطح تمرین
+              <select value={form.surface} onChange={(e) => setForm({ ...form, surface: e.target.value })} className={inputCls + " mt-1"} style={inputStyle}>
                 {surfaces.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
-            </label>
+            </Field>
           </div>
-          <label className="text-xs text-[#9c9388] block">تکنیک تمرین‌شده
-            <input type="text" value={form.technique} onChange={(e) => setForm({ ...form, technique: e.target.value })} placeholder="مثلاً: خطوط منحنی، شیدینگ واش" className="mt-1 w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]" />
-          </label>
+          <Field>تکنیک تمرین‌شده
+            <input type="text" value={form.technique} onChange={(e) => setForm({ ...form, technique: e.target.value })} placeholder="مثلاً: خطوط منحنی، شیدینگ واش" className={inputCls + " mt-1"} style={inputStyle} />
+          </Field>
           <div className="grid grid-cols-2 gap-3">
-            <label className="text-xs text-[#9c9388]">مدت (دقیقه)
-              <input type="number" min="0" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} className="mt-1 w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]" />
-            </label>
-            <label className="text-xs text-[#9c9388]">رضایت از نتیجه
-              <div className="mt-1.5 flex gap-1">
+            <Field>مدت (دقیقه)
+              <input type="number" min="0" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} className={inputCls + " mt-1"} style={inputStyle} />
+            </Field>
+            <Field>رضایت از نتیجه
+              <div className="mt-2 flex gap-1">
                 {[1, 2, 3, 4, 5].map((n) => (
                   <button key={n} type="button" onClick={() => setForm({ ...form, rating: n })} aria-label={n + " ستاره"}>
-                    <Icon name="star" size={18} fill={n <= form.rating ? "#c9a06a" : "none"} color={n <= form.rating ? "#c9a06a" : "#4a443a"} />
+                    <Icon name="star" size={18} fill={n <= form.rating ? C.gold : "none"} color={n <= form.rating ? C.gold : "#5c4a70"} />
                   </button>
                 ))}
               </div>
-            </label>
+            </Field>
           </div>
-          <label className="text-xs text-[#9c9388] block">یادداشت
-            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="چی خوب پیش رفت، چی نیاز به تمرین بیشتر داره؟" className="mt-1 w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a] resize-none" />
-          </label>
+          <Field>یادداشت
+            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="چی خوب پیش رفت، چی نیاز به تمرین بیشتر داره؟" className={inputCls + " mt-1 resize-none"} style={inputStyle} />
+          </Field>
           <div className="flex gap-2 pt-1">
             <IconBtn onClick={addSession} label="ذخیره">ذخیره جلسه</IconBtn>
-            <button onClick={() => setShowForm(false)} className="px-3 py-2 text-sm text-[#9c9388] hover:text-[#f3ede2]">انصراف</button>
+            <button onClick={() => setShowForm(false)} className="px-3 py-2 text-sm hover:brightness-125" style={{ color: C.muted }}>انصراف</button>
           </div>
-        </StencilCard>
+        </InkCard>
       )}
 
       {sessions.length === 0 ? <EmptyState text="هنوز جلسه‌ای ثبت نشده. اولین تمرینت رو ثبت کن." /> : (
         <div className="space-y-3">
           {sessions.map((s) => (
-            <StencilCard key={s.id} className="relative">
-              <button onClick={() => removeSession(s.id)} className="absolute left-3 top-3 text-[#6b6459] hover:text-[#b8272f]" aria-label="حذف جلسه"><Icon name="trash" size={14} /></button>
+            <InkCard key={s.id} className="relative">
+              <button onClick={() => removeSession(s.id)} className="absolute left-0 top-0 hover:brightness-125" style={{ color: C.faint }} aria-label="حذف جلسه"><Icon name="trash" size={14} /></button>
               <div className="flex items-center gap-2 mb-1">
-                <span className="font-mono text-xs text-[#c9a06a]">{s.date}</span>
-                <span className="text-[10px] text-[#9c9388] bg-[#26221e] px-2 py-0.5 rounded-full">{s.surface}</span>
+                <span className="font-mono text-xs" style={{ color: C.gold }}>{s.date}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ color: C.muted, background: C.chip }}>{s.surface}</span>
               </div>
-              <div className="text-[#f3ede2] font-medium">{s.technique}</div>
-              {s.notes && <div className="text-sm text-[#9c9388] mt-1">{s.notes}</div>}
+              <div className="font-medium" style={{ color: C.cream }}>{s.technique}</div>
+              {s.notes && <div className="text-sm mt-1" style={{ color: C.muted }}>{s.notes}</div>}
               <div className="flex items-center justify-between mt-2">
                 <div className="flex gap-0.5">
-                  {[1, 2, 3, 4, 5].map((n) => <Icon key={n} name="star" size={14} fill={n <= s.rating ? "#c9a06a" : "none"} color={n <= s.rating ? "#c9a06a" : "#4a443a"} />)}
+                  {[1, 2, 3, 4, 5].map((n) => <Icon key={n} name="star" size={14} fill={n <= s.rating ? C.gold : "none"} color={n <= s.rating ? C.gold : "#5c4a70"} />)}
                 </div>
-                {s.duration && <span className="font-mono text-[11px] text-[#9c9388]">{s.duration} دقیقه</span>}
+                {s.duration && <span className="font-mono text-[11px]" style={{ color: C.muted }}>{s.duration} دقیقه</span>}
               </div>
-            </StencilCard>
+            </InkCard>
           ))}
         </div>
       )}
@@ -361,17 +402,19 @@ function Checklist({ checklist, setChecklist }) {
         return (
           <div key={stage.id}>
             <div className="flex items-center gap-2 mb-2">
-              <span className="font-mono text-xs text-[#b8272f]">{String(idx + 1).padStart(2, "0")}</span>
-              <h3 className="text-[#f3ede2] text-sm font-medium">{stage.title}</h3>
-              <span className="font-mono text-[10px] text-[#9c9388] mr-auto">{done}/{stage.items.length}</span>
+              <span className="w-6 h-6 rounded-full flex items-center justify-center font-mono text-[11px]" style={{ background: C.chip, color: C.coralSoft }}>{idx + 1}</span>
+              <h3 className="text-sm font-medium" style={{ color: C.cream }}>{stage.title}</h3>
+              <span className="font-mono text-[10px] mr-auto" style={{ color: C.muted }}>{done}/{stage.items.length}</span>
             </div>
             <div className="space-y-1.5">
               {stage.items.map((it) => (
-                <button key={it.id} onClick={() => toggle(it.id)} className="w-full flex items-center gap-3 bg-[#1e1b18] border border-[#26221e] rounded-sm px-3 py-2.5 text-right hover:border-[#3a352e] transition-colors">
-                  <span className={"flex-shrink-0 w-4 h-4 rounded-sm border flex items-center justify-center " + (checklist[it.id] ? "bg-[#b8272f] border-[#b8272f]" : "border-[#4a443a]")}>
-                    {checklist[it.id] && <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 5l3 3 5-6" stroke="#f3ede2" strokeWidth="1.5" fill="none"/></svg>}
+                <button key={it.id} onClick={() => toggle(it.id)} className="w-full flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-right transition-colors"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center transition-colors"
+                    style={{ background: checklist[it.id] ? "linear-gradient(135deg,#ef8b6f,#d9673f)" : "transparent", borderColor: checklist[it.id] ? "#ef8b6f" : "#5c4a70" }}>
+                    {checklist[it.id] && <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 5l3 3 5-6" stroke="#fff" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                   </span>
-                  <span className={"text-sm " + (checklist[it.id] ? "text-[#6b6459] line-through" : "text-[#f3ede2]")}>{it.label}</span>
+                  <span className="text-sm" style={{ color: checklist[it.id] ? C.faint : C.cream, textDecoration: checklist[it.id] ? "line-through" : "none" }}>{it.label}</span>
                 </button>
               ))}
             </div>
@@ -404,36 +447,36 @@ function References({ refs, setRefs }) {
       } />
 
       {showForm && (
-        <StencilCard className="space-y-3">
-          <input type="text" placeholder="عنوان (مثلاً: سبک اولد اسکول - گل رز)" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]" />
-          <input type="text" placeholder="لینک تصویر یا رفرنس (اختیاری)" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} className="w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]" />
-          <input type="text" placeholder="برچسب‌ها با کاما (سبک، سوژه، رنگ...)" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} className="w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]" />
-          <textarea placeholder="یادداشت" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a] resize-none" />
+        <InkCard className="space-y-3">
+          <input type="text" placeholder="عنوان (مثلاً: سبک اولد اسکول - گل رز)" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className={inputCls} style={inputStyle} />
+          <input type="text" placeholder="لینک تصویر یا رفرنس (اختیاری)" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} className={inputCls} style={inputStyle} />
+          <input type="text" placeholder="برچسب‌ها با کاما (سبک، سوژه، رنگ...)" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} className={inputCls} style={inputStyle} />
+          <textarea placeholder="یادداشت" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputCls + " resize-none"} style={inputStyle} />
           <div className="flex gap-2">
             <IconBtn onClick={addRef} label="ذخیره">ذخیره</IconBtn>
-            <button onClick={() => setShowForm(false)} className="px-3 py-2 text-sm text-[#9c9388] hover:text-[#f3ede2]">انصراف</button>
+            <button onClick={() => setShowForm(false)} className="px-3 py-2 text-sm hover:brightness-125" style={{ color: C.muted }}>انصراف</button>
           </div>
-        </StencilCard>
+        </InkCard>
       )}
 
       {refs.length === 0 ? <EmptyState text="هنوز رفرنسی اضافه نکردی." /> : (
         <div className="grid grid-cols-2 gap-3">
           {refs.map((r) => (
-            <StencilCard key={r.id} className="relative">
-              <button onClick={() => removeRef(r.id)} className="absolute left-2 top-2 text-[#6b6459] hover:text-[#b8272f]" aria-label="حذف"><Icon name="x" size={14} /></button>
-              <div className="text-sm text-[#f3ede2] font-medium pl-4">{r.title}</div>
+            <InkCard key={r.id} className="relative" glow="gold">
+              <button onClick={() => removeRef(r.id)} className="absolute left-0 top-0 hover:brightness-125" style={{ color: C.faint }} aria-label="حذف"><Icon name="x" size={14} /></button>
+              <div className="text-sm font-medium pl-4" style={{ color: C.cream }}>{r.title}</div>
               {r.url && (
-                <a href={r.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[11px] text-[#c9a06a] mt-1 truncate hover:text-[#e0b788]">
+                <a href={r.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[11px] mt-1 truncate hover:brightness-125" style={{ color: C.gold }}>
                   <Icon name="link" size={12} className="flex-shrink-0" /><span className="truncate">{r.url}</span>
                 </a>
               )}
               {r.tags && (
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {r.tags.split(",").map((t, i) => t.trim() && <span key={i} className="text-[10px] text-[#9c9388] bg-[#26221e] px-1.5 py-0.5 rounded-full">{t.trim()}</span>)}
+                  {r.tags.split(",").map((t, i) => t.trim() && <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ color: C.muted, background: C.chip }}>{t.trim()}</span>)}
                 </div>
               )}
-              {r.notes && <div className="text-xs text-[#9c9388] mt-2">{r.notes}</div>}
-            </StencilCard>
+              {r.notes && <div className="text-xs mt-2" style={{ color: C.muted }}>{r.notes}</div>}
+            </InkCard>
           ))}
         </div>
       )}
@@ -448,30 +491,30 @@ function Technical() {
   return (
     <div className="space-y-6">
       <SectionTitle eyebrow="مرجع" title="اطلاعات فنی" />
-      <StencilCard className="border-solid !bg-[#241a1a]">
-        <p className="text-xs text-[#c9a06a] leading-relaxed">
+      <InkCard glow="gold">
+        <p className="text-xs leading-relaxed" style={{ color: C.gold }}>
           این بخش فقط یک مرور کلی برای یادگیریه. تنظیمات واقعیِ ولتاژ، سرعت و عمق به دستگاه، برند سوزن و توصیه‌ی مربیت بستگی داره — همیشه دستورالعمل مربی و سازنده‌ی دستگاه رو ملاک قرار بده.
         </p>
-      </StencilCard>
+      </InkCard>
       <div>
-        <h3 className="text-[#f3ede2] text-sm font-medium mb-2">گروه‌بندی سوزن‌ها</h3>
+        <h3 className="text-sm font-medium mb-2" style={{ color: C.cream }}>گروه‌بندی سوزن‌ها</h3>
         <div className="space-y-2">
           {NEEDLE_INFO.map((n) => (
-            <div key={n.code} className="flex items-start gap-3 bg-[#1e1b18] border border-[#26221e] rounded-sm px-3 py-2.5">
-              <span className="font-mono text-xs text-[#b8272f] bg-[#26221e] px-2 py-1 rounded-sm flex-shrink-0">{n.code}</span>
+            <div key={n.code} className="flex items-start gap-3 rounded-2xl px-3.5 py-2.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <span className="font-mono text-xs px-2 py-1 rounded-full flex-shrink-0" style={{ color: C.coralSoft, background: C.chip }}>{n.code}</span>
               <div>
-                <div className="text-sm text-[#f3ede2]">{n.name}</div>
-                <div className="text-xs text-[#9c9388]">{n.use}</div>
+                <div className="text-sm" style={{ color: C.cream }}>{n.name}</div>
+                <div className="text-xs" style={{ color: C.muted }}>{n.use}</div>
               </div>
             </div>
           ))}
         </div>
       </div>
       <div>
-        <h3 className="text-[#f3ede2] text-sm font-medium mb-2">چک‌لیست بهداشتی هر جلسه</h3>
-        <ul className="space-y-1.5 text-sm text-[#9c9388]">
+        <h3 className="text-sm font-medium mb-2" style={{ color: C.cream }}>چک‌لیست بهداشتی هر جلسه</h3>
+        <ul className="space-y-1.5 text-sm" style={{ color: C.muted }}>
           {["دستکش یک‌بار مصرف برای هر مشتری", "سوزن و کارتریج استریل و یک‌بار مصرف", "پوشش‌گذاری سطوح (بارریر) قبل از شروع", "ضدعفونی پوست قبل از استنسیل", "دفع صحیح زباله‌های نوک‌تیز (شارپس)"].map((t, i) => (
-            <li key={i} className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-[#c9a06a] mt-2 flex-shrink-0" />{t}</li>
+            <li key={i} className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: C.gold }} />{t}</li>
           ))}
         </ul>
       </div>
@@ -501,31 +544,31 @@ function Portfolio({ portfolio, setPortfolio }) {
       } />
 
       {showForm && (
-        <StencilCard className="space-y-3">
-          <input type="text" placeholder="عنوان کار" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]" />
+        <InkCard className="space-y-3">
+          <input type="text" placeholder="عنوان کار" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className={inputCls} style={inputStyle} />
           <div className="grid grid-cols-2 gap-3">
-            <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]" />
-            <input type="text" placeholder="سبک (سنتی، خط‌محور...)" value={form.style} onChange={(e) => setForm({ ...form, style: e.target.value })} className="w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]" />
+            <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className={inputCls} style={inputStyle} />
+            <input type="text" placeholder="سبک (سنتی، خط‌محور...)" value={form.style} onChange={(e) => setForm({ ...form, style: e.target.value })} className={inputCls} style={inputStyle} />
           </div>
-          <input type="text" placeholder="لینک عکس (اختیاری)" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} className="w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]" />
-          <textarea placeholder="یادداشت" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a] resize-none" />
+          <input type="text" placeholder="لینک عکس (اختیاری)" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} className={inputCls} style={inputStyle} />
+          <textarea placeholder="یادداشت" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputCls + " resize-none"} style={inputStyle} />
           <div className="flex gap-2">
             <IconBtn onClick={addItem} label="ذخیره">ذخیره</IconBtn>
-            <button onClick={() => setShowForm(false)} className="px-3 py-2 text-sm text-[#9c9388] hover:text-[#f3ede2]">انصراف</button>
+            <button onClick={() => setShowForm(false)} className="px-3 py-2 text-sm hover:brightness-125" style={{ color: C.muted }}>انصراف</button>
           </div>
-        </StencilCard>
+        </InkCard>
       )}
 
       {portfolio.length === 0 ? <EmptyState text="هنوز کاری ثبت نشده." /> : (
         <div className="grid grid-cols-2 gap-3">
           {portfolio.map((p) => (
-            <StencilCard key={p.id} className="relative overflow-hidden">
-              <button onClick={() => removeItem(p.id)} className="absolute left-2 top-2 z-10 text-[#f3ede2] bg-[#141210]/70 rounded-full p-1 hover:text-[#b8272f]" aria-label="حذف"><Icon name="x" size={12} /></button>
-              {p.imageUrl && <img src={p.imageUrl} alt={p.title} className="w-full h-24 object-cover rounded-sm mb-2 -mt-1" onError={(e) => (e.target.style.display = "none")} />}
-              <div className="text-sm text-[#f3ede2] font-medium">{p.title}</div>
-              <div className="text-[11px] text-[#9c9388]">{p.style} {p.style && "·"} {p.date}</div>
-              {p.notes && <div className="text-xs text-[#9c9388] mt-1">{p.notes}</div>}
-            </StencilCard>
+            <InkCard key={p.id} className="relative overflow-hidden" glow="coral">
+              <button onClick={() => removeItem(p.id)} className="absolute left-2 top-2 z-10 rounded-full p-1 text-white hover:brightness-125" style={{ background: "rgba(0,0,0,0.4)" }} aria-label="حذف"><Icon name="x" size={12} /></button>
+              {p.imageUrl && <img src={p.imageUrl} alt={p.title} className="w-full h-24 object-cover rounded-2xl mb-2 -mt-1" onError={(e) => (e.target.style.display = "none")} />}
+              <div className="text-sm font-medium" style={{ color: C.cream }}>{p.title}</div>
+              <div className="text-[11px]" style={{ color: C.muted }}>{p.style} {p.style && "·"} {p.date}</div>
+              {p.notes && <div className="text-xs mt-1" style={{ color: C.muted }}>{p.notes}</div>}
+            </InkCard>
           ))}
         </div>
       )}
@@ -548,7 +591,7 @@ function Clients({ clients, setClients }) {
   }
   function removeClient(id) { setClients(clients.filter((c) => c.id !== id)); }
 
-  const statusColor = { "در انتظار": "#c9a06a", "قطعی": "#7fae7c", "انجام شد": "#6b6459" };
+  const statusColor = { "در انتظار": C.gold, "قطعی": C.green, "انجام شد": C.faint };
 
   return (
     <div className="space-y-5">
@@ -557,40 +600,40 @@ function Clients({ clients, setClients }) {
       } />
 
       {showForm && (
-        <StencilCard className="space-y-3">
-          <input type="text" placeholder="نام مشتری" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]" />
+        <InkCard className="space-y-3">
+          <input type="text" placeholder="نام مشتری" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputCls} style={inputStyle} />
           <div className="grid grid-cols-2 gap-3">
-            <input type="tel" placeholder="شماره تماس" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]" />
-            <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]" />
+            <input type="tel" placeholder="شماره تماس" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} style={inputStyle} />
+            <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className={inputCls} style={inputStyle} />
           </div>
-          <input type="text" placeholder="نوع کار (مثلاً: خط‌محور کوچک روی مچ)" value={form.service} onChange={(e) => setForm({ ...form, service: e.target.value })} className="w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]" />
-          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a]">
+          <input type="text" placeholder="نوع کار (مثلاً: خط‌محور کوچک روی مچ)" value={form.service} onChange={(e) => setForm({ ...form, service: e.target.value })} className={inputCls} style={inputStyle} />
+          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className={inputCls} style={inputStyle}>
             <option>در انتظار</option><option>قطعی</option><option>انجام شد</option>
           </select>
-          <textarea placeholder="یادداشت" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full bg-[#141210] border border-[#3a352e] rounded-sm px-2 py-1.5 text-sm text-[#f3ede2] outline-none focus:border-[#c9a06a] resize-none" />
+          <textarea placeholder="یادداشت" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputCls + " resize-none"} style={inputStyle} />
           <div className="flex gap-2">
             <IconBtn onClick={addClient} label="ذخیره">ذخیره</IconBtn>
-            <button onClick={() => setShowForm(false)} className="px-3 py-2 text-sm text-[#9c9388] hover:text-[#f3ede2]">انصراف</button>
+            <button onClick={() => setShowForm(false)} className="px-3 py-2 text-sm hover:brightness-125" style={{ color: C.muted }}>انصراف</button>
           </div>
-        </StencilCard>
+        </InkCard>
       )}
 
       {clients.length === 0 ? <EmptyState text="مشتری‌ای ثبت نشده." /> : (
         <div className="space-y-2">
           {clients.map((c) => (
-            <StencilCard key={c.id} className="relative">
-              <button onClick={() => removeClient(c.id)} className="absolute left-3 top-3 text-[#6b6459] hover:text-[#b8272f]" aria-label="حذف"><Icon name="trash" size={14} /></button>
+            <InkCard key={c.id} className="relative">
+              <button onClick={() => removeClient(c.id)} className="absolute left-0 top-0 hover:brightness-125" style={{ color: C.faint }} aria-label="حذف"><Icon name="trash" size={14} /></button>
               <div className="flex items-center gap-2">
-                <span className="text-[#f3ede2] font-medium">{c.name}</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ color: statusColor[c.status] || "#9c9388", backgroundColor: "#26221e" }}>{c.status}</span>
+                <span className="font-medium" style={{ color: C.cream }}>{c.name}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ color: statusColor[c.status] || C.muted, background: C.chip }}>{c.status}</span>
               </div>
-              <div className="text-sm text-[#9c9388] mt-1">{c.service}</div>
-              <div className="flex items-center gap-4 mt-2 text-[11px] text-[#9c9388]">
+              <div className="text-sm mt-1" style={{ color: C.muted }}>{c.service}</div>
+              <div className="flex items-center gap-4 mt-2 text-[11px]" style={{ color: C.muted }}>
                 {c.phone && <span className="flex items-center gap-1"><Icon name="phone" size={12} /> {c.phone}</span>}
                 {c.date && <span className="flex items-center gap-1 font-mono"><Icon name="calendar" size={12} /> {c.date}</span>}
               </div>
-              {c.notes && <div className="text-xs text-[#9c9388] mt-1.5">{c.notes}</div>}
-            </StencilCard>
+              {c.notes && <div className="text-xs mt-1.5" style={{ color: C.muted }}>{c.notes}</div>}
+            </InkCard>
           ))}
         </div>
       )}
@@ -611,6 +654,16 @@ const TABS = [
   { id: "technical", label: "فنی", icon: "info" },
 ];
 
+function BackgroundArt() {
+  return (
+    <div className="fixed inset-0 -z-10 overflow-hidden" style={{ background: "linear-gradient(160deg,#1b1130,#241633 45%,#2c1a30)" }}>
+      <div className="blob-a absolute -top-24 -right-16 w-72 h-72 rounded-full" style={{ background: "radial-gradient(circle, rgba(232,121,95,0.35), transparent 70%)", filter: "blur(10px)" }} />
+      <div className="blob-b absolute top-1/2 -left-24 w-80 h-80 rounded-full" style={{ background: "radial-gradient(circle, rgba(226,184,120,0.22), transparent 70%)", filter: "blur(10px)" }} />
+      <div className="absolute bottom-0 right-1/3 w-64 h-64 rounded-full blob-a" style={{ background: "radial-gradient(circle, rgba(150,90,160,0.25), transparent 70%)", filter: "blur(10px)" }} />
+    </div>
+  );
+}
+
 function App() {
   const [tab, setTab] = useState("dashboard");
   const [sessions, setSessions] = useCollection(STORAGE_KEYS.sessions);
@@ -625,8 +678,9 @@ function App() {
   }, []);
 
   return (
-    <div dir="rtl" className="min-h-screen bg-[#141210] text-[#f3ede2] flex flex-col" style={{ fontFamily: "'Vazirmatn', 'Work Sans', sans-serif" }}>
-      <main className="flex-1 max-w-md w-full mx-auto px-4 pt-6 pb-24">
+    <div dir="rtl" className="min-h-screen flex flex-col" style={{ fontFamily: "'Vazirmatn', sans-serif", color: C.cream }}>
+      <BackgroundArt />
+      <main className="flex-1 max-w-md w-full mx-auto px-4 pt-6 pb-28">
         {tab === "dashboard" && <Dashboard sessions={sessions} checklist={checklist} clients={clients} onNav={setTab} />}
         {tab === "practice" && <PracticeLog sessions={sessions} setSessions={setSessions} />}
         {tab === "checklist" && <Checklist checklist={checklist} setChecklist={setChecklist} />}
@@ -635,13 +689,21 @@ function App() {
         {tab === "clients" && <Clients clients={clients} setClients={setClients} />}
         {tab === "technical" && <Technical />}
       </main>
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto w-full bg-[#1a1715] border-t border-[#26221e] flex justify-around py-2 px-1">
-        {TABS.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)} className="flex flex-col items-center gap-1 px-1.5 py-1.5 flex-1">
-            <Icon name={t.icon} size={18} color={tab === t.id ? "#c9a06a" : "#6b6459"} />
-            <span className="text-[9px]" style={{ color: tab === t.id ? "#c9a06a" : "#6b6459" }}>{t.label}</span>
-          </button>
-        ))}
+
+      <nav className="fixed bottom-4 left-4 right-4 max-w-md mx-auto flex justify-around items-center py-2 px-2 rounded-full"
+        style={{ background: "rgba(36,22,45,0.85)", backdropFilter: "blur(14px)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 12px 30px -10px rgba(0,0,0,0.6)" }}>
+        {TABS.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button key={t.id} onClick={() => setTab(t.id)} className="flex flex-col items-center gap-1 px-1 py-1 flex-1">
+              <span className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300"
+                style={{ background: active ? "linear-gradient(135deg,#ef8b6f,#d9673f)" : "transparent" }}>
+                <Icon name={t.icon} size={16} color={active ? "#fff" : C.faint} />
+              </span>
+              <span className="text-[9px] transition-colors" style={{ color: active ? C.gold : C.faint }}>{t.label}</span>
+            </button>
+          );
+        })}
       </nav>
     </div>
   );
