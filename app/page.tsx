@@ -1,0 +1,15 @@
+import {createClient} from "@/lib/supabase/server";
+import Link from "next/link";
+export default async function Home(){
+ const supabase=await createClient();
+ const [{data:styles},{data:portfolio},{data:faq}]=await Promise.all([
+  supabase.from("styles").select("*").eq("active",true).order("sort_order"),
+  supabase.from("portfolio").select("*,styles(name)").eq("published",true).order("created_at",{ascending:false}).limit(9),
+  supabase.from("faq").select("*").eq("published",true).order("sort_order")
+ ]);
+ return <><header className="nav wrap"><div className="brand">SBN <span>TATTOO</span></div><nav className="navlinks"><a href="#portfolio">نمونه‌کار</a><a href="#styles">سبک‌ها</a><a href="#faq">سؤالات</a><a href="#booking">رزرو</a><Link href="/login">مدیریت</Link></nav></header>
+ <main className="wrap"><section className="hero"><div><div className="eyebrow">TATTOO STUDIO · YAZD</div><h1>هنر روی پوست،<br/><em>با امضای SBN.</em></h1><p className="muted">نمونه‌کارها را ببین، ایده‌ات را بگو و درخواست نوبتت را ارسال کن.</p><a className="btn primary" href="#booking">درخواست نوبت</a><a className="btn" href="#portfolio">نمونه‌کارها</a></div><div className="heroart">SBN</div></section>
+ <section id="portfolio" className="section"><div className="eyebrow">PORTFOLIO</div><h2>نمونه‌کارها</h2><div className="grid">{(portfolio||[]).map((p:any)=><article className="card" key={p.id}><div className="tattoo">SBN</div><h3>{p.title}</h3><div className="muted">{p.styles?.name||"—"} · {p.body_area||"—"}</div></article>)}</div></section>
+ <section id="styles" className="section"><div className="eyebrow">STYLES</div><h2>سبک‌های کاری</h2><div className="grid">{(styles||[]).map((s:any)=><div className="card" key={s.id}><h3>{s.name}</h3><p className="muted">{s.description}</p></div>)}</div></section>
+ <section id="booking" className="section"><div className="eyebrow">BOOKING</div><h2>درخواست نوبت</h2><p className="muted">زمان توسط SBN TATTOO تأیید می‌شود و قیمت پس از بررسی طرح اعلام خواهد شد.</p><form className="form" action="/api/booking" method="post"><div className="two"><label>نام<input name="name" required/></label><label>موبایل<input name="phone" required/></label></div><div className="two"><label>سبک<select name="style_id">{(styles||[]).map((s:any)=><option value={s.id} key={s.id}>{s.name}</option>)}</select></label><label>محل بدن<input name="body_area"/></label></div><div className="two"><label>اندازه تقریبی<input name="size"/></label><label>تاریخ پیشنهادی<input name="preferred_date" type="date"/></label></div><label>توضیحات<textarea name="notes" rows={5}/></label><button className="btn primary" type="submit">ارسال درخواست</button></form></section>
+ <section id="faq" className="section"><div className="eyebrow">FAQ</div><h2>سؤالات متداول</h2>{(faq||[]).map((f:any)=><details className="card" key={f.id}><summary>{f.question}</summary><p className="muted">{f.answer}</p></details>)}</section></main></> }
